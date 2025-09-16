@@ -309,8 +309,8 @@ function formatDate(date) {
 }
 
 function formatDisplayDate(dateString) {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('pt-BR').format(date);
+    const [year, month, day] = dateString.split("-");
+    return `${day}/${month}/${year}`;
 }
 
 function formatDateForExport(date) {
