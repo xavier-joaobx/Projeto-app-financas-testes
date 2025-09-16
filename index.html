@@ -48,8 +48,13 @@
             </div>
             
             <div class="chart-container">
-                <p>Gráfico de Evolução Financeira (seria implementado com uma biblioteca como Chart.js)</p>
-            </div>
+    <div class="chart-controls">
+        <button class="chart-btn active" data-view="monthly">Mensal</button>
+        <button class="chart-btn" data-view="yearly">Anual</button>
+        <button class="chart-btn" data-view="category">Categorias</button>
+    </div>
+    <canvas id="financialChart"></canvas>
+</div>
         </section>
 
         
