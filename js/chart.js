@@ -2,6 +2,7 @@ class FinancialChart {
     constructor() {
         this.chart = null;
         this.currentView = 'monthly'; // monthly, yearly, category
+        this.transactions = transactions; // Recebe transações como parâmetro
         this.init();
     }
 
