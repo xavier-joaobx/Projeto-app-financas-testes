@@ -1,81 +1,294 @@
-// Lista de transações
-let transacoes = JSON.parse(localStorage.getItem("transacoes")) || [];
-let metas = JSON.parse(localStorage.getItem("metas")) || [];
+ // Variáveis globais
+        let transactions = [];
+        let goals = {
+            income: 0,
+            expense: 0
+        };
 
-// Atualiza dashboard
-function atualizarDashboard() {
-  let receitas = transacoes.filter(t => t.tipo === "receita")
-    .reduce((acc, t) => acc + t.valor, 0);
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            updateDashboard();
+            renderTransactions();
+            
+            // Configurar data atual como padrão
+            document.getElementById('date').valueAsDate = new Date();
+            
+            // Configurar o formulário
+            document.getElementById('transaction-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                addTransaction();
+            });
+        });
 
-  let despesas = transacoes.filter(t => t.tipo === "despesa")
-    .reduce((acc, t) => acc + t.valor, 0);
+        // Carregar dados do localStorage
+        function loadData() {
+            const savedTransactions = localStorage.getItem('financialTransactions');
+            const savedGoals = localStorage.getItem('financialGoals');
+            
+            if (savedTransactions) {
+                transactions = JSON.parse(savedTransactions);
+            }
+            
+            if (savedGoals) {
+                goals = JSON.parse(savedGoals);
+                document.getElementById('income-goal').value = goals.income;
+                document.getElementById('expense-limit').value = goals.expense;
+            }
+        }
 
-  let saldo = receitas - despesas;
+        // Salvar dados no localStorage
+        function saveData() {
+            localStorage.setItem('financialTransactions', JSON.stringify(transactions));
+            localStorage.setItem('financialGoals', JSON.stringify(goals));
+        }
 
-  if (document.getElementById("saldo"))
-    document.getElementById("saldo").textContent = "R$ " + saldo.toFixed(2);
-  if (document.getElementById("receitas"))
-    document.getElementById("receitas").textContent = "R$ " + receitas.toFixed(2);
-  if (document.getElementById("despesas"))
-    document.getElementById("despesas").textContent = "R$ " + despesas.toFixed(2);
-}
+        // Adicionar nova transação
+        function addTransaction() {
+            const description = document.getElementById('description').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const type = document.getElementById('type').value;
+            const category = document.getElementById('category').value;
+            const date = document.getElementById('date').value;
+            
+            if (!description || isNaN(amount) || amount <= 0 || !date) {
+                showAlert('Por favor, preencha todos os campos corretamente.', 'error');
+                return;
+            }
+            
+            const transaction = {
+                id: Date.now(), // ID único baseado no timestamp
+                description,
+                amount,
+                type,
+                category,
+                date
+            };
+            
+            transactions.push(transaction);
+            saveData();
+            updateDashboard();
+            renderTransactions();
+            
+            // Limpar formulário
+            document.getElementById('transaction-form').reset();
+            document.getElementById('date').valueAsDate = new Date();
+            
+            showAlert('Transação adicionada com sucesso!', 'success');
+        }
 
-// Renderiza transações
-function renderizarTransacoes() {
-  if (!document.getElementById("listaTransacoes")) return;
-  let lista = document.getElementById("listaTransacoes");
-  lista.innerHTML = "";
-  transacoes.forEach((t, i) => {
-    let li = document.createElement("li");
-    li.textContent = `${t.descricao} - R$ ${t.valor.toFixed(2)} (${t.tipo})`;
-    lista.appendChild(li);
-  });
-}
+        // Excluir transação
+        function deleteTransaction(id) {
+            if (confirm('Tem certeza que deseja excluir esta transação?')) {
+                transactions = transactions.filter(transaction => transaction.id !== id);
+                saveData();
+                updateDashboard();
+                renderTransactions();
+                showAlert('Transação excluída com sucesso!', 'success');
+            }
+        }
 
-// Renderiza metas
-function renderizarMetas() {
-  if (!document.getElementById("listaMetas")) return;
-  let lista = document.getElementById("listaMetas");
-  lista.innerHTML = "";
-  metas.forEach(m => {
-    let li = document.createElement("li");
-    li.textContent = `${m.meta} - R$ ${m.valor.toFixed(2)}`;
-    lista.appendChild(li);
-  });
-}
+        // Definir meta/limite
+        function setGoal(type) {
+            const inputElement = type === 'income' ? 
+                document.getElementById('income-goal') : 
+                document.getElementById('expense-limit');
+                
+            const value = parseFloat(inputElement.value);
+            
+            if (isNaN(value) || value < 0) {
+                showAlert('Por favor, insira um valor válido.', 'error');
+                return;
+            }
+            
+            goals[type] = value;
+            saveData();
+            updateDashboard();
+            showAlert(`${type === 'income' ? 'Meta' : 'Limite'} definido com sucesso!`, 'success');
+        }
 
-// Eventos de formulário
-document.addEventListener("DOMContentLoaded", () => {
-  atualizarDashboard();
-  renderizarTransacoes();
-  renderizarMetas();
+        // Atualizar dashboard
+        function updateDashboard() {
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            
+            // Calcular totais
+            const totalIncome = transactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + t.amount, 0);
+                
+            const totalExpenses = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+                
+            const balance = totalIncome - totalExpenses;
+            
+            // Calcular totais do mês atual
+            const monthIncome = transactions
+                .filter(t => {
+                    if (t.type !== 'income') return false;
+                    const date = new Date(t.date);
+                    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+                })
+                .reduce((sum, t) => sum + t.amount, 0);
+                
+            const monthExpenses = transactions
+                .filter(t => {
+                    if (t.type !== 'expense') return false;
+                    const date = new Date(t.date);
+                    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+                })
+                .reduce((sum, t) => sum + t.amount, 0);
+            
+            // Atualizar UI
+            document.getElementById('current-balance').textContent = `R$ ${balance.toFixed(2)}`;
+            document.getElementById('current-balance').className = `balance ${balance >= 0 ? 'positive' : 'negative'}`;
+            
+            document.getElementById('month-income').textContent = `R$ ${monthIncome.toFixed(2)}`;
+            document.getElementById('month-expenses').textContent = `R$ ${monthExpenses.toFixed(2)}`;
+            
+            document.getElementById('last-update').textContent = `Atualizado em: ${formatDate(now)}`;
+            
+            // Verificar metas
+            if (goals.income > 0 && monthIncome >= goals.income) {
+                showAlert('Parabéns! Você atingiu sua meta de receitas deste mês.', 'success');
+            }
+            
+            if (goals.expense > 0 && monthExpenses >= goals.expense) {
+                showAlert('Atenção! Você atingiu seu limite de despesas deste mês.', 'error');
+            }
+        }
 
-  let formT = document.getElementById("formTransacao");
-  if (formT) {
-    formT.addEventListener("submit", e => {
-      e.preventDefault();
-      let descricao = document.getElementById("descricao").value;
-      let valor = parseFloat(document.getElementById("valor").value);
-      let tipo = document.getElementById("tipo").value;
-      transacoes.push({ descricao, valor, tipo });
-      localStorage.setItem("transacoes", JSON.stringify(transacoes));
-      atualizarDashboard();
-      renderizarTransacoes();
-      formT.reset();
-    });
-  }
+        // Renderizar transações na tabela
+        function renderTransactions() {
+            const tbody = document.getElementById('transactions-body');
+            const typeFilter = document.getElementById('filter-type').value;
+            const categoryFilter = document.getElementById('filter-category').value;
+            const monthFilter = document.getElementById('filter-month').value;
+            
+            // Filtrar transações
+            let filteredTransactions = transactions;
+            
+            if (typeFilter !== 'all') {
+                filteredTransactions = filteredTransactions.filter(t => t.type === typeFilter);
+            }
+            
+            if (categoryFilter !== 'all') {
+                filteredTransactions = filteredTransactions.filter(t => t.category === categoryFilter);
+            }
+            
+            if (monthFilter !== 'all') {
+                const month = parseInt(monthFilter);
+                filteredTransactions = filteredTransactions.filter(t => {
+                    const date = new Date(t.date);
+                    return date.getMonth() === month;
+                });
+            }
+            
+            // Ordenar por data (mais recente primeiro)
+            filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            // Limpar tabela
+            tbody.innerHTML = '';
+            
+            // Adicionar transações
+            if (filteredTransactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Nenhuma transação encontrada.</td></tr>';
+                return;
+            }
+            
+            filteredTransactions.forEach(transaction => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${formatDisplayDate(transaction.date)}</td>
+                    <td>${transaction.description}</td>
+                    <td>${getCategoryName(transaction.category)}</td>
+                    <td class="${transaction.type === 'income' ? 'positive' : 'negative'}">
+                        R$ ${transaction.amount.toFixed(2)}
+                    </td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteTransaction(${transaction.id})">Excluir</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
 
-  let formM = document.getElementById("formMeta");
-  if (formM) {
-    formM.addEventListener("submit", e => {
-      e.preventDefault();
-      let meta = document.getElementById("meta").value;
-      let valor = parseFloat(document.getElementById("valorMeta").value);
-      metas.push({ meta, valor });
-      localStorage.setItem("metas", JSON.stringify(metas));
-      renderizarMetas();
-      formM.reset();
-    });
-  }
-});
+        // Filtrar transações
+        function filterTransactions() {
+            renderTransactions();
+        }
 
+        // Limpar todos os dados
+        function clearAllData() {
+            if (confirm('Tem certeza que deseja limpar TODOS os dados? Esta ação não pode ser desfeita.')) {
+                transactions = [];
+                goals = { income: 0, expense: 0 };
+                saveData();
+                updateDashboard();
+                renderTransactions();
+                
+                document.getElementById('income-goal').value = '';
+                document.getElementById('expense-limit').value = '';
+                
+                showAlert('Todos os dados foram limpos.', 'success');
+            }
+        }
+
+        // Exportar dados
+        function exportData() {
+            const dataStr = JSON.stringify(transactions, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `financas_${formatDateForExport(new Date())}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showAlert('Dados exportados com sucesso!', 'success');
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert alert-${type}`;
+            alertBox.style.display = 'block';
+            
+            setTimeout(() => {
+                alertBox.style.display = 'none';
+            }, 5000);
+        }
+
+        // Funções auxiliares
+        function formatDate(date) {
+            return new Intl.DateTimeFormat('pt-BR').format(date);
+        }
+        
+        function formatDisplayDate(dateString) {
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat('pt-BR').format(date);
+        }
+        
+        function formatDateForExport(date) {
+            return date.toISOString().slice(0, 10).replace(/-/g, '');
+        }
+        
+        function getCategoryName(category) {
+            const categories = {
+                'food': 'Alimentação',
+                'transport': 'Transporte',
+                'housing': 'Moradia',
+                'health': 'Saúde',
+                'education': 'Educação',
+                'entertainment': 'Entretenimento',
+                'other': 'Outros'
+            };
+            
+            return categories[category] || category;
+        }
