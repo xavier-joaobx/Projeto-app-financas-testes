@@ -49,6 +49,9 @@ function loadData() {
 function saveData() {
     localStorage.setItem('financialTransactions', JSON.stringify(transactions));
     localStorage.setItem('financialGoals', JSON.stringify(goals));
+    if (window.financialChart) {
+        window.financialChart.refresh();
+    }
 }
 
 // Adicionar nova transação
