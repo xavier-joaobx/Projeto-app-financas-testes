@@ -7,6 +7,13 @@ let goals = {
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.chart-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderChart(btn.dataset.view);
+    });
+});
     loadData();
     updateDashboard();
     renderTransactions();
