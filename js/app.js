@@ -326,3 +326,77 @@ function getCategoryName(category) {
     
     return categories[category] || category;
 }
+let financeChart = null; // variável global do gráfico
+
+function renderChart() {
+    const ctx = document.getElementById('financeChart');
+    if (!ctx) return; // só roda se existir o canvas na página
+
+    // Agrupar receitas e despesas por mês
+    const monthlyData = {};
+    transactions.forEach(t => {
+        const date = new Date(t.date);
+        const monthYear = `${date.getMonth()+1}/${date.getFullYear()}`;
+        if (!monthlyData[monthYear]) {
+            monthlyData[monthYear] = { income: 0, expense: 0 };
+        }
+        if (t.type === 'income') {
+            monthlyData[monthYear].income += t.amount;
+        } else {
+            monthlyData[monthYear].expense += t.amount;
+        }
+    });
+
+    // Preparar labels e datasets
+    const labels = Object.keys(monthlyData).sort((a, b) => {
+        const [ma, ya] = a.split('/');
+        const [mb, yb] = b.split('/');
+        return new Date(ya, ma-1) - new Date(yb, mb-1);
+    });
+
+    const incomeData = labels.map(l => monthlyData[l].income);
+    const expenseData = labels.map(l => monthlyData[l].expense);
+
+    // Se já existe gráfico, destrói antes de recriar
+    if (financeChart) {
+        financeChart.destroy();
+    }
+
+    financeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Receitas',
+                    data: incomeData,
+                    borderColor: '#27ae60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Despesas',
+                    data: expenseData,
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: 'Evolução Financeira Mensal'
+                }
+            }
+        }
+    });
+}
+
