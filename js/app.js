@@ -339,8 +339,6 @@ function getCategoryName(category) {
 }
 let financeChart = null; // variável global do gráfico
 
-function renderChart() {
-    let financeChart = null; // gráfico global
 
 function renderChart(view = 'monthly') {
     const ctx = document.getElementById('financialChart');
@@ -462,5 +460,3 @@ function renderChart(view = 'monthly') {
         }
     });
 }
-}
-
