@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadData();
     updateDashboard();
     renderTransactions();
+    renderChart();
 
     // Configurar data atual como padrão (se o campo existir)
     const dateInput = document.getElementById('date');
@@ -80,6 +81,7 @@ function addTransaction() {
     saveData();
     updateDashboard();
     renderTransactions();
+    renderChart();
     
     // Limpar formulário
     document.getElementById('transaction-form').reset();
@@ -95,6 +97,7 @@ function deleteTransaction(id) {
         saveData();
         updateDashboard();
         renderTransactions();
+        renderChart();
         showAlert('Transação excluída com sucesso!', 'success');
     }
 }
@@ -252,6 +255,7 @@ function clearAllData() {
         saveData();
         updateDashboard();
         renderTransactions();
+        renderChart();
         
         const incomeGoalEl = document.getElementById('income-goal');
         const expenseLimitEl = document.getElementById('expense-limit');
