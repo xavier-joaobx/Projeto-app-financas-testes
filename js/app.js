@@ -7,17 +7,10 @@ let goals = {
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.chart-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        renderChart(btn.dataset.view);
-    });
-});
     loadData();
     updateDashboard();
     renderTransactions();
-    renderChart('monthly');
+    renderChart();
 
     // Configurar data atual como padrão (se o campo existir)
     const dateInput = document.getElementById('date');
@@ -339,122 +332,72 @@ function getCategoryName(category) {
 }
 let financeChart = null; // variável global do gráfico
 
+function renderChart() {
+    const ctx = document.getElementById('financeChart');
+    if (!ctx) return; // só roda se existir o canvas na página
 
-function renderChart(view = 'monthly') {
-    const ctx = document.getElementById('financialChart');
-    if (!ctx) return;
+    // Agrupar receitas e despesas por mês
+    const monthlyData = {};
+    transactions.forEach(t => {
+        const date = new Date(t.date);
+        const monthYear = `${date.getMonth()+1}/${date.getFullYear()}`;
+        if (!monthlyData[monthYear]) {
+            monthlyData[monthYear] = { income: 0, expense: 0 };
+        }
+        if (t.type === 'income') {
+            monthlyData[monthYear].income += t.amount;
+        } else {
+            monthlyData[monthYear].expense += t.amount;
+        }
+    });
 
-    // Se já existe gráfico, destruir antes
+    // Preparar labels e datasets
+    const labels = Object.keys(monthlyData).sort((a, b) => {
+        const [ma, ya] = a.split('/');
+        const [mb, yb] = b.split('/');
+        return new Date(ya, ma-1) - new Date(yb, mb-1);
+    });
+
+    const incomeData = labels.map(l => monthlyData[l].income);
+    const expenseData = labels.map(l => monthlyData[l].expense);
+
+    // Se já existe gráfico, destrói antes de recriar
     if (financeChart) {
         financeChart.destroy();
     }
 
-    // =========================
-    // Agrupar dados
-    // =========================
-    let labels = [];
-    let datasets = [];
-    let chartType = 'line'; // padrão: mensal
-
-    if (view === 'monthly') {
-        // Agrupar receitas/despesas por mês/ano
-        const monthlyData = {};
-        transactions.forEach(t => {
-            const d = new Date(t.date);
-            const key = `${d.getMonth()+1}/${d.getFullYear()}`;
-            if (!monthlyData[key]) monthlyData[key] = { income: 0, expense: 0 };
-            monthlyData[key][t.type] += t.amount;
-        });
-
-        labels = Object.keys(monthlyData).sort((a, b) => {
-            const [ma, ya] = a.split('/');
-            const [mb, yb] = b.split('/');
-            return new Date(ya, ma-1) - new Date(yb, mb-1);
-        });
-
-        datasets = [
-            {
-                label: 'Receitas',
-                data: labels.map(l => monthlyData[l].income),
-                borderColor: '#27ae60',
-                backgroundColor: 'rgba(39,174,96,0.2)',
-                fill: true,
-                tension: 0.3
-            },
-            {
-                label: 'Despesas',
-                data: labels.map(l => monthlyData[l].expense),
-                borderColor: '#e74c3c',
-                backgroundColor: 'rgba(231,76,60,0.2)',
-                fill: true,
-                tension: 0.3
-            }
-        ];
-
-    } else if (view === 'yearly') {
-        // Agrupar receitas/despesas por ano
-        const yearlyData = {};
-        transactions.forEach(t => {
-            const d = new Date(t.date);
-            const key = `${d.getFullYear()}`;
-            if (!yearlyData[key]) yearlyData[key] = { income: 0, expense: 0 };
-            yearlyData[key][t.type] += t.amount;
-        });
-
-        labels = Object.keys(yearlyData).sort();
-        datasets = [
-            {
-                label: 'Receitas',
-                data: labels.map(l => yearlyData[l].income),
-                backgroundColor: '#27ae60'
-            },
-            {
-                label: 'Despesas',
-                data: labels.map(l => yearlyData[l].expense),
-                backgroundColor: '#e74c3c'
-            }
-        ];
-        chartType = 'bar';
-
-    } else if (view === 'category') {
-        // Distribuição por categoria
-        const categoryData = {};
-        transactions.forEach(t => {
-            if (!categoryData[t.category]) categoryData[t.category] = 0;
-            categoryData[t.category] += t.amount;
-        });
-
-        labels = Object.keys(categoryData).map(c => getCategoryName(c));
-        datasets = [{
-            label: 'Distribuição por Categoria',
-            data: Object.values(categoryData),
-            backgroundColor: [
-                '#3498db','#9b59b6','#f1c40f',
-                '#e67e22','#1abc9c','#34495e','#e74c3c'
-            ]
-        }];
-        chartType = 'pie';
-    }
-
-    // =========================
-    // Criar gráfico
-    // =========================
     financeChart = new Chart(ctx, {
-        type: chartType,
+        type: 'line',
         data: {
             labels,
-            datasets
+            datasets: [
+                {
+                    label: 'Receitas',
+                    data: incomeData,
+                    borderColor: '#27ae60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Despesas',
+                    data: expenseData,
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                }
+            ]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { position: 'top' },
+                legend: {
+                    position: 'top'
+                },
                 title: {
                     display: true,
-                    text:
-                        view === 'monthly' ? 'Evolução Mensal' :
-                        view === 'yearly' ? 'Evolução Anual' :
-                        'Distribuição por Categorias'
+                    text: 'Evolução Financeira Mensal'
                 }
             }
         }
